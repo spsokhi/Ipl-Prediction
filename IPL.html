@@ -1,0 +1,1303 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>IPL Oracle • Premium Match Prediction Dashboard</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<style>
+/* ============================================================
+   IPL ORACLE - Premium Cricket Analytics Dashboard
+   Single-file, vanilla JS, fully offline
+   ============================================================ */
+
+/* ---------- Reset & Base ---------- */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { height: 100%; }
+body {
+  font-family: 'Inter', 'Segoe UI', system-ui, -apple-system, sans-serif;
+  background: #05060e;
+  color: #e8ecf3;
+  min-height: 100vh;
+  overflow-x: hidden;
+  position: relative;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* ---------- Animated Background ---------- */
+.bg-wrap {
+  position: fixed;
+  inset: 0;
+  z-index: -2;
+  background:
+    radial-gradient(1200px 700px at 10% -10%, rgba(120, 80, 255, 0.25), transparent 60%),
+    radial-gradient(1000px 600px at 110% 10%, rgba(255, 80, 160, 0.18), transparent 60%),
+    radial-gradient(900px 600px at 50% 120%, rgba(0, 200, 255, 0.18), transparent 60%),
+    linear-gradient(180deg, #05060e 0%, #07091a 50%, #05060e 100%);
+}
+
+/* Floating gradient blobs */
+.blob {
+  position: fixed;
+  border-radius: 50%;
+  filter: blur(80px);
+  opacity: 0.55;
+  z-index: -1;
+  animation: float 18s ease-in-out infinite;
+  pointer-events: none;
+}
+.blob.b1 { width: 420px; height: 420px; background: radial-gradient(circle, #ff3d77, transparent 60%); top: -100px; left: -100px; }
+.blob.b2 { width: 480px; height: 480px; background: radial-gradient(circle, #7a5cff, transparent 60%); bottom: -120px; right: -80px; animation-delay: -6s; }
+.blob.b3 { width: 360px; height: 360px; background: radial-gradient(circle, #00d4ff, transparent 60%); top: 40%; left: 50%; animation-delay: -12s; }
+
+@keyframes float {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  33% { transform: translate(40px, -30px) scale(1.08); }
+  66% { transform: translate(-30px, 40px) scale(0.95); }
+}
+
+/* Particles canvas */
+#particles { position: fixed; inset: 0; z-index: -1; pointer-events: none; }
+
+/* Subtle cricket field pattern overlay (pure CSS) */
+.field-overlay {
+  position: fixed; inset: 0; z-index: -1; pointer-events: none; opacity: 0.04;
+  background-image:
+    repeating-linear-gradient(45deg, #fff 0 1px, transparent 1px 28px),
+    repeating-linear-gradient(-45deg, #fff 0 1px, transparent 1px 28px);
+}
+
+/* ---------- Layout ---------- */
+.container {
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: 32px 24px 80px;
+  position: relative;
+}
+
+/* ---------- Header ---------- */
+header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 16px;
+  margin-bottom: 36px;
+}
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+.brand-logo {
+  width: 52px; height: 52px;
+  border-radius: 14px;
+  display: grid; place-items: center;
+  background: linear-gradient(135deg, #ff3d77, #7a5cff 60%, #00d4ff);
+  box-shadow: 0 8px 30px rgba(122, 92, 255, 0.45), inset 0 0 20px rgba(255,255,255,0.15);
+  position: relative;
+  overflow: hidden;
+}
+.brand-logo::after {
+  content: ""; position: absolute; inset: 0;
+  background: radial-gradient(circle at 30% 20%, rgba(255,255,255,0.5), transparent 40%);
+}
+.brand-logo svg { width: 28px; height: 28px; color: #fff; position: relative; z-index: 2; }
+.brand-text h1 {
+  font-size: 22px; font-weight: 800; letter-spacing: 0.3px;
+  background: linear-gradient(90deg, #fff, #c9d1ff);
+  -webkit-background-clip: text; background-clip: text; color: transparent;
+}
+.brand-text p { font-size: 12px; color: #8a93a8; letter-spacing: 1.2px; text-transform: uppercase; }
+
+.header-badge {
+  display: inline-flex; align-items: center; gap: 8px;
+  padding: 8px 14px; border-radius: 999px;
+  background: rgba(255,255,255,0.04);
+  border: 1px solid rgba(255,255,255,0.08);
+  backdrop-filter: blur(10px);
+  font-size: 12px; color: #b9c0d6; letter-spacing: 0.5px;
+}
+.live-dot {
+  width: 8px; height: 8px; border-radius: 50%;
+  background: #29e07a; box-shadow: 0 0 10px #29e07a;
+  animation: pulse 1.6s ease-in-out infinite;
+}
+@keyframes pulse { 50% { opacity: 0.45; transform: scale(0.85); } }
+
+/* ---------- Glass Card ---------- */
+.glass {
+  background: linear-gradient(180deg, rgba(255,255,255,0.06), rgba(255,255,255,0.02));
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 22px;
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+  box-shadow: 0 10px 40px rgba(0,0,0,0.45), inset 0 1px 0 rgba(255,255,255,0.04);
+}
+
+/* ---------- Grid ---------- */
+.grid {
+  display: grid;
+  grid-template-columns: 1.05fr 1.4fr;
+  gap: 24px;
+}
+@media (max-width: 980px) { .grid { grid-template-columns: 1fr; } }
+
+/* ---------- Section Titles ---------- */
+.section-title {
+  font-size: 13px; letter-spacing: 2px; text-transform: uppercase;
+  color: #98a1bd; margin-bottom: 16px; font-weight: 700;
+  display: flex; align-items: center; gap: 10px;
+}
+.section-title::before {
+  content: ""; width: 4px; height: 16px; border-radius: 4px;
+  background: linear-gradient(180deg, #ff3d77, #7a5cff);
+}
+
+/* ---------- Inputs Panel ---------- */
+.panel { padding: 26px; }
+.panel h2 {
+  font-size: 20px; font-weight: 700; margin-bottom: 4px;
+}
+.panel .sub { color: #8a93a8; font-size: 13px; margin-bottom: 22px; }
+
+.field { margin-bottom: 16px; }
+.field label {
+  display: block; font-size: 12px; font-weight: 600;
+  color: #b6bdd1; letter-spacing: 0.8px; text-transform: uppercase;
+  margin-bottom: 8px;
+}
+
+.select, .seg {
+  width: 100%;
+  background: rgba(255,255,255,0.04);
+  border: 1px solid rgba(255,255,255,0.1);
+  color: #e8ecf3;
+  border-radius: 12px;
+  padding: 12px 14px;
+  font-size: 14px;
+  font-family: inherit;
+  outline: none;
+  transition: all 0.25s ease;
+  appearance: none;
+  cursor: pointer;
+}
+.select:hover, .select:focus {
+  border-color: rgba(122, 92, 255, 0.6);
+  background: rgba(122, 92, 255, 0.08);
+  box-shadow: 0 0 0 4px rgba(122, 92, 255, 0.12);
+}
+.select-wrap { position: relative; }
+.select-wrap::after {
+  content: "▾"; position: absolute; right: 14px; top: 50%;
+  transform: translateY(-50%); color: #8a93a8; pointer-events: none; font-size: 12px;
+}
+
+/* Segmented control */
+.seg-group {
+  display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px;
+}
+.seg-group.four { grid-template-columns: repeat(4, 1fr); }
+@media (max-width: 520px) { .seg-group.four { grid-template-columns: repeat(2, 1fr); } }
+.seg {
+  text-align: center; padding: 10px 8px; font-size: 13px;
+  border-radius: 10px; user-select: none;
+}
+.seg.active {
+  background: linear-gradient(135deg, rgba(255,61,119,0.25), rgba(122,92,255,0.25));
+  border-color: rgba(122, 92, 255, 0.7);
+  box-shadow: 0 0 18px rgba(122, 92, 255, 0.35);
+  color: #fff;
+}
+
+/* Two-team row */
+.teams-row {
+  display: grid; grid-template-columns: 1fr auto 1fr; gap: 12px; align-items: end;
+}
+.vs-pill {
+  margin-bottom: 4px;
+  padding: 10px 12px; border-radius: 12px;
+  background: linear-gradient(135deg, #ff3d77, #7a5cff);
+  font-weight: 800; font-size: 13px; letter-spacing: 1px;
+  box-shadow: 0 6px 20px rgba(255, 61, 119, 0.35);
+  color: #fff;
+}
+
+/* ---------- Predict Button ---------- */
+.predict-btn {
+  width: 100%;
+  margin-top: 10px;
+  padding: 16px 20px;
+  border: none;
+  border-radius: 14px;
+  font-size: 15px;
+  font-weight: 800;
+  letter-spacing: 1.2px;
+  text-transform: uppercase;
+  color: #fff;
+  cursor: pointer;
+  position: relative;
+  overflow: hidden;
+  background: linear-gradient(135deg, #ff3d77, #7a5cff 50%, #00d4ff);
+  background-size: 200% 200%;
+  box-shadow: 0 10px 30px rgba(122, 92, 255, 0.45), 0 0 0 1px rgba(255,255,255,0.08) inset;
+  transition: transform 0.18s ease, box-shadow 0.25s ease, background-position 0.6s ease;
+}
+.predict-btn:hover {
+  transform: translateY(-2px);
+  background-position: 100% 100%;
+  box-shadow: 0 16px 40px rgba(255, 61, 119, 0.45);
+}
+.predict-btn:active { transform: translateY(0); }
+.predict-btn:disabled { opacity: 0.7; cursor: not-allowed; }
+.predict-btn .shine {
+  position: absolute; top: 0; left: -50%; width: 50%; height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.35), transparent);
+  transform: skewX(-20deg);
+  animation: shine 2.6s ease-in-out infinite;
+}
+@keyframes shine { 0% { left: -50%; } 60%, 100% { left: 130%; } }
+
+/* ---------- Results Panel ---------- */
+.results { padding: 26px; min-height: 100%; }
+
+.matchup {
+  display: grid; grid-template-columns: 1fr auto 1fr; gap: 16px; align-items: center;
+  padding: 18px; border-radius: 18px;
+  background: linear-gradient(180deg, rgba(255,255,255,0.04), rgba(255,255,255,0.01));
+  border: 1px solid rgba(255,255,255,0.06);
+  margin-bottom: 22px;
+}
+.team-card { display: flex; flex-direction: column; align-items: center; gap: 10px; }
+.team-logo {
+  width: 76px; height: 76px; border-radius: 50%;
+  display: grid; place-items: center;
+  font-weight: 900; font-size: 22px; letter-spacing: 0.5px;
+  color: #fff;
+  position: relative;
+  box-shadow: 0 8px 28px rgba(0,0,0,0.45), inset 0 0 0 3px rgba(255,255,255,0.08);
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+.team-logo::after {
+  content: ""; position: absolute; inset: -4px; border-radius: 50%;
+  border: 1px dashed rgba(255,255,255,0.12);
+  animation: rotate 18s linear infinite;
+}
+@keyframes rotate { to { transform: rotate(360deg); } }
+.team-card:hover .team-logo { transform: scale(1.05); box-shadow: 0 12px 36px rgba(122,92,255,0.4); }
+
+.team-name { font-weight: 700; font-size: 14px; text-align: center; }
+.team-prob { font-size: 12px; color: #98a1bd; }
+
+.vs-circle {
+  width: 56px; height: 56px; border-radius: 50%;
+  display: grid; place-items: center;
+  background: rgba(255,255,255,0.05);
+  border: 1px solid rgba(255,255,255,0.1);
+  font-weight: 800; font-size: 14px; letter-spacing: 1px;
+  color: #c9d1ff;
+}
+
+/* Probability bars */
+.bars { margin-top: 10px; }
+.bar-row { margin-bottom: 14px; }
+.bar-head { display: flex; justify-content: space-between; font-size: 13px; margin-bottom: 6px; color: #c9d1ff; }
+.bar-head strong { font-weight: 700; }
+.bar-track {
+  width: 100%; height: 12px; border-radius: 999px;
+  background: rgba(255,255,255,0.05);
+  border: 1px solid rgba(255,255,255,0.06);
+  overflow: hidden;
+  position: relative;
+}
+.bar-fill {
+  height: 100%; width: 0;
+  border-radius: 999px;
+  background: linear-gradient(90deg, #ff3d77, #7a5cff, #00d4ff);
+  box-shadow: 0 0 14px rgba(122, 92, 255, 0.55);
+  transition: width 1.2s cubic-bezier(0.22, 1, 0.36, 1);
+  position: relative;
+}
+.bar-fill.alt { background: linear-gradient(90deg, #00d4ff, #29e07a); box-shadow: 0 0 14px rgba(41, 224, 122, 0.45); }
+
+/* Stat grid */
+.stat-grid {
+  display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px;
+  margin-top: 22px;
+}
+@media (max-width: 600px) { .stat-grid { grid-template-columns: repeat(2, 1fr); } }
+.stat {
+  padding: 14px; border-radius: 14px;
+  background: linear-gradient(180deg, rgba(255,255,255,0.05), rgba(255,255,255,0.01));
+  border: 1px solid rgba(255,255,255,0.07);
+  position: relative; overflow: hidden;
+}
+.stat::before {
+  content: ""; position: absolute; left: 0; top: 0; bottom: 0; width: 3px;
+  background: linear-gradient(180deg, #ff3d77, #7a5cff);
+}
+.stat .lab { font-size: 11px; color: #8a93a8; text-transform: uppercase; letter-spacing: 1px; }
+.stat .val { font-size: 18px; font-weight: 800; margin-top: 4px; }
+
+/* Circular gauge */
+.gauge-wrap {
+  display: flex; align-items: center; gap: 20px;
+  padding: 18px; border-radius: 18px;
+  background: linear-gradient(180deg, rgba(255,255,255,0.04), rgba(255,255,255,0.01));
+  border: 1px solid rgba(255,255,255,0.06);
+  margin-top: 18px;
+  flex-wrap: wrap;
+}
+.gauge { position: relative; width: 140px; height: 140px; flex-shrink: 0; }
+.gauge svg { transform: rotate(-90deg); width: 100%; height: 100%; }
+.gauge .track { fill: none; stroke: rgba(255,255,255,0.08); stroke-width: 12; }
+.gauge .fill {
+  fill: none; stroke: url(#gaugeGrad); stroke-width: 12; stroke-linecap: round;
+  stroke-dasharray: 0 999;
+  transition: stroke-dasharray 1.4s cubic-bezier(0.22, 1, 0.36, 1);
+  filter: drop-shadow(0 0 10px rgba(122,92,255,0.55));
+}
+.gauge .center {
+  position: absolute; inset: 0; display: grid; place-items: center;
+  flex-direction: column;
+}
+.gauge .center .pct { font-size: 28px; font-weight: 800; line-height: 1; }
+.gauge .center .label { font-size: 10px; letter-spacing: 1.5px; color: #98a1bd; text-transform: uppercase; margin-top: 4px; }
+
+.winner-info { flex: 1; min-width: 200px; }
+.winner-info .crown {
+  font-size: 11px; letter-spacing: 2px; color: #ffce4a; text-transform: uppercase; font-weight: 700;
+}
+.winner-info .who { font-size: 22px; font-weight: 800; margin-top: 4px; }
+.winner-info .reason { font-size: 13px; color: #b6bdd1; margin-top: 8px; line-height: 1.5; }
+
+/* Insights */
+.insights {
+  margin-top: 22px;
+  padding: 18px; border-radius: 18px;
+  background: linear-gradient(180deg, rgba(255,255,255,0.04), rgba(255,255,255,0.01));
+  border: 1px solid rgba(255,255,255,0.06);
+}
+.insight-row {
+  display: flex; align-items: center; gap: 12px;
+  padding: 10px 0;
+  border-bottom: 1px dashed rgba(255,255,255,0.06);
+  font-size: 13px;
+}
+.insight-row:last-child { border-bottom: none; }
+.insight-row .ico {
+  width: 32px; height: 32px; border-radius: 10px;
+  display: grid; place-items: center;
+  background: linear-gradient(135deg, rgba(255,61,119,0.2), rgba(122,92,255,0.2));
+  border: 1px solid rgba(255,255,255,0.08);
+  font-size: 14px;
+}
+.insight-row .label { color: #98a1bd; flex: 1; }
+.insight-row .val { font-weight: 700; color: #e8ecf3; }
+
+/* Commentary */
+.commentary {
+  margin-top: 18px;
+  padding: 16px 18px; border-radius: 14px;
+  background: linear-gradient(135deg, rgba(255, 206, 74, 0.08), rgba(255, 61, 119, 0.05));
+  border: 1px solid rgba(255, 206, 74, 0.2);
+  font-size: 14px; color: #f4e5b8;
+  line-height: 1.6;
+  font-style: italic;
+}
+.commentary::before { content: "🎙️ "; font-style: normal; }
+
+/* Momentum meter */
+.momentum {
+  margin-top: 18px;
+  padding: 16px 18px; border-radius: 14px;
+  background: linear-gradient(180deg, rgba(255,255,255,0.04), rgba(255,255,255,0.01));
+  border: 1px solid rgba(255,255,255,0.06);
+}
+.mom-head { display: flex; justify-content: space-between; font-size: 12px; color: #98a1bd; margin-bottom: 10px; text-transform: uppercase; letter-spacing: 1px; }
+.mom-track {
+  position: relative; height: 18px; border-radius: 999px;
+  background: linear-gradient(90deg, rgba(0,212,255,0.15), rgba(255,255,255,0.04), rgba(255,61,119,0.15));
+  border: 1px solid rgba(255,255,255,0.08);
+  overflow: visible;
+}
+.mom-marker {
+  position: absolute; top: 50%; transform: translate(-50%, -50%);
+  width: 26px; height: 26px; border-radius: 50%;
+  background: radial-gradient(circle at 30% 30%, #fff, #c9d1ff 60%, #7a5cff 100%);
+  box-shadow: 0 0 18px rgba(255,255,255,0.5);
+  transition: left 1.2s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+/* Phase predictions row */
+.phases {
+  display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px;
+  margin-top: 18px;
+}
+@media (max-width: 520px) { .phases { grid-template-columns: 1fr; } }
+.phase {
+  padding: 14px 16px; border-radius: 14px;
+  background: linear-gradient(135deg, rgba(122,92,255,0.10), rgba(0,212,255,0.06));
+  border: 1px solid rgba(122,92,255,0.25);
+  position: relative; overflow: hidden;
+}
+.phase::after {
+  content: ""; position: absolute; right: -20px; top: -20px;
+  width: 80px; height: 80px; border-radius: 50%;
+  background: radial-gradient(circle, rgba(122,92,255,0.25), transparent 70%);
+}
+.phase .lab { font-size: 11px; color: #b6bdd1; text-transform: uppercase; letter-spacing: 1px; }
+.phase .val { font-size: 16px; font-weight: 800; margin-top: 4px; }
+.phase .desc { font-size: 11px; color: #98a1bd; margin-top: 4px; }
+
+/* Simulate again */
+.again-btn {
+  margin-top: 18px;
+  width: 100%;
+  padding: 14px 18px;
+  border-radius: 12px;
+  border: 1px solid rgba(255,255,255,0.12);
+  background: rgba(255,255,255,0.04);
+  color: #e8ecf3;
+  font-weight: 700; font-size: 13px; letter-spacing: 1.5px; text-transform: uppercase;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+.again-btn:hover {
+  background: rgba(122, 92, 255, 0.15);
+  border-color: rgba(122, 92, 255, 0.5);
+  box-shadow: 0 0 18px rgba(122, 92, 255, 0.3);
+}
+
+/* Empty state */
+.empty {
+  display: grid; place-items: center;
+  text-align: center; padding: 40px 20px;
+  color: #98a1bd;
+}
+.empty .big { font-size: 48px; margin-bottom: 14px; }
+.empty h3 { font-size: 18px; color: #e8ecf3; margin-bottom: 8px; }
+.empty p { font-size: 13px; max-width: 360px; line-height: 1.6; }
+
+/* Loading */
+.loading {
+  display: grid; place-items: center;
+  padding: 40px 20px;
+}
+.loader {
+  width: 80px; height: 80px;
+  border-radius: 50%;
+  border: 4px solid rgba(255,255,255,0.08);
+  border-top-color: #ff3d77;
+  border-right-color: #7a5cff;
+  animation: spin 0.9s linear infinite;
+  margin-bottom: 20px;
+  position: relative;
+}
+.loader::after {
+  content: ""; position: absolute; inset: -10px;
+  border-radius: 50%;
+  border: 2px dashed rgba(122,92,255,0.4);
+  animation: spin 4s linear infinite reverse;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+.loading .txt { font-size: 13px; letter-spacing: 2px; color: #98a1bd; text-transform: uppercase; }
+.loading .sub { font-size: 11px; color: #6b7390; margin-top: 8px; }
+
+/* Fade in for results */
+.fade-in { animation: fadeUp 0.6s cubic-bezier(0.22, 1, 0.36, 1) both; }
+@keyframes fadeUp { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: translateY(0); } }
+
+/* Footer */
+footer {
+  margin-top: 40px;
+  text-align: center;
+  font-size: 12px;
+  color: #6b7390;
+  letter-spacing: 0.5px;
+}
+footer span { color: #ff3d77; }
+
+/* Scrollbar */
+::-webkit-scrollbar { width: 10px; }
+::-webkit-scrollbar-track { background: #07091a; }
+::-webkit-scrollbar-thumb { background: linear-gradient(180deg, #ff3d77, #7a5cff); border-radius: 10px; }
+</style>
+</head>
+<body>
+
+<!-- Background layers -->
+<div class="bg-wrap"></div>
+<div class="blob b1"></div>
+<div class="blob b2"></div>
+<div class="blob b3"></div>
+<canvas id="particles"></canvas>
+<div class="field-overlay"></div>
+
+<div class="container">
+
+  <!-- Header -->
+  <header>
+    <div class="brand">
+      <div class="brand-logo">
+        <!-- Stylized cricket bat + ball icon -->
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M3 21l3-3" />
+          <path d="M6 18l9-9 3 3-9 9z" />
+          <path d="M14 7l3-3a2.83 2.83 0 014 4l-3 3" />
+          <circle cx="6.5" cy="17.5" r="1.2" fill="currentColor"/>
+        </svg>
+      </div>
+      <div class="brand-text">
+        <h1>IPL Oracle</h1>
+        <p>Premium Match Prediction Engine</p>
+      </div>
+    </div>
+    <div class="header-badge">
+      <span class="live-dot"></span>
+      Analytics Engine v2.6 • Offline
+    </div>
+  </header>
+
+  <div class="grid">
+
+    <!-- ============ INPUTS PANEL ============ -->
+    <section class="glass panel">
+      <div class="section-title">Match Setup</div>
+      <h2>Configure the Fixture</h2>
+      <p class="sub">Select teams, venue, toss outcome and conditions. The engine will compute realistic probabilities.</p>
+
+      <!-- Teams -->
+      <div class="field">
+        <label>Teams</label>
+        <div class="teams-row">
+          <div class="select-wrap">
+            <select id="team1" class="select"></select>
+          </div>
+          <div class="vs-pill">VS</div>
+          <div class="select-wrap">
+            <select id="team2" class="select"></select>
+          </div>
+        </div>
+      </div>
+
+      <!-- Venue -->
+      <div class="field">
+        <label>Venue</label>
+        <div class="select-wrap">
+          <select id="venue" class="select"></select>
+        </div>
+      </div>
+
+      <!-- Toss winner -->
+      <div class="field">
+        <label>Toss Winner</label>
+        <div class="select-wrap">
+          <select id="tossWinner" class="select"></select>
+        </div>
+      </div>
+
+      <!-- Toss decision -->
+      <div class="field">
+        <label>Toss Decision</label>
+        <div class="seg-group" id="tossDecision">
+          <div class="seg active" data-value="Bat">🏏 Bat First</div>
+          <div class="seg" data-value="Bowl">🎯 Bowl First</div>
+        </div>
+      </div>
+
+      <!-- Pitch -->
+      <div class="field">
+        <label>Pitch Type</label>
+        <div class="seg-group four" id="pitchType">
+          <div class="seg active" data-value="Batting">Batting</div>
+          <div class="seg" data-value="Bowling">Bowling</div>
+          <div class="seg" data-value="Spin">Spin Friendly</div>
+          <div class="seg" data-value="Pace">Pace Friendly</div>
+        </div>
+      </div>
+
+      <!-- Weather -->
+      <div class="field">
+        <label>Weather</label>
+        <div class="seg-group four" id="weather">
+          <div class="seg active" data-value="Clear">☀️ Clear</div>
+          <div class="seg" data-value="Dew">💧 Dew</div>
+          <div class="seg" data-value="Humid">🌫️ Humid</div>
+          <div class="seg" data-value="Rain">🌧️ Rain</div>
+        </div>
+      </div>
+
+      <button class="predict-btn" id="predictBtn">
+        <span class="shine"></span>
+        ⚡ Run Prediction
+      </button>
+    </section>
+
+    <!-- ============ RESULTS PANEL ============ -->
+    <section class="glass results" id="resultsPanel">
+      <div class="section-title">Prediction Output</div>
+
+      <!-- Empty state by default -->
+      <div class="empty" id="emptyState">
+        <div class="big">🏟️</div>
+        <h3>Awaiting Match Configuration</h3>
+        <p>Choose two teams, set the venue, toss and pitch conditions, then run the prediction engine to see win probabilities, score forecasts and live insights.</p>
+      </div>
+
+      <!-- Loading state -->
+      <div class="loading" id="loadingState" style="display:none;">
+        <div class="loader"></div>
+        <div class="txt">Analyzing Match Data</div>
+        <div class="sub" id="loadingSub">Computing team strengths...</div>
+      </div>
+
+      <!-- Result content -->
+      <div id="resultContent" style="display:none;">
+
+        <!-- Matchup header -->
+        <div class="matchup fade-in">
+          <div class="team-card">
+            <div class="team-logo" id="logo1">CSK</div>
+            <div class="team-name" id="name1">Chennai Super Kings</div>
+            <div class="team-prob" id="prob1Lbl">0%</div>
+          </div>
+          <div class="vs-circle">VS</div>
+          <div class="team-card">
+            <div class="team-logo" id="logo2">MI</div>
+            <div class="team-name" id="name2">Mumbai Indians</div>
+            <div class="team-prob" id="prob2Lbl">0%</div>
+          </div>
+        </div>
+
+        <!-- Probability bars -->
+        <div class="bars fade-in">
+          <div class="bar-row">
+            <div class="bar-head"><span id="bar1Name">Team 1</span><strong id="bar1Val">0%</strong></div>
+            <div class="bar-track"><div class="bar-fill" id="bar1"></div></div>
+          </div>
+          <div class="bar-row">
+            <div class="bar-head"><span id="bar2Name">Team 2</span><strong id="bar2Val">0%</strong></div>
+            <div class="bar-track"><div class="bar-fill alt" id="bar2"></div></div>
+          </div>
+        </div>
+
+        <!-- Winner gauge -->
+        <div class="gauge-wrap fade-in">
+          <div class="gauge">
+            <svg viewBox="0 0 120 120">
+              <defs>
+                <linearGradient id="gaugeGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+                  <stop offset="0%" stop-color="#ff3d77"/>
+                  <stop offset="50%" stop-color="#7a5cff"/>
+                  <stop offset="100%" stop-color="#00d4ff"/>
+                </linearGradient>
+              </defs>
+              <circle class="track" cx="60" cy="60" r="50"></circle>
+              <circle class="fill" id="gaugeFill" cx="60" cy="60" r="50"></circle>
+            </svg>
+            <div class="center">
+              <div>
+                <div class="pct" id="gaugePct">0%</div>
+                <div class="label">Win Probability</div>
+              </div>
+            </div>
+          </div>
+          <div class="winner-info">
+            <div class="crown">👑 Predicted Winner</div>
+            <div class="who" id="winnerName">—</div>
+            <div class="reason" id="winnerReason">—</div>
+          </div>
+        </div>
+
+        <!-- Quick stat grid -->
+        <div class="stat-grid fade-in">
+          <div class="stat">
+            <div class="lab">Confidence</div>
+            <div class="val" id="confidence">—</div>
+          </div>
+          <div class="stat">
+            <div class="lab">1st Innings Score</div>
+            <div class="val" id="firstScore">—</div>
+          </div>
+          <div class="stat">
+            <div class="lab">Excitement</div>
+            <div class="val" id="excitement">—</div>
+          </div>
+        </div>
+
+        <!-- Momentum meter -->
+        <div class="momentum fade-in">
+          <div class="mom-head">
+            <span id="momLeft">Team 1</span>
+            <span>Momentum</span>
+            <span id="momRight">Team 2</span>
+          </div>
+          <div class="mom-track">
+            <div class="mom-marker" id="momMarker" style="left: 50%;"></div>
+          </div>
+        </div>
+
+        <!-- Phases predictions -->
+        <div class="phases fade-in">
+          <div class="phase">
+            <div class="lab">⚡ Powerplay (1-6)</div>
+            <div class="val" id="ppScore">—</div>
+            <div class="desc" id="ppDesc">—</div>
+          </div>
+          <div class="phase">
+            <div class="lab">🔥 Death Overs (16-20)</div>
+            <div class="val" id="doScore">—</div>
+            <div class="desc" id="doDesc">—</div>
+          </div>
+        </div>
+
+        <!-- Insights -->
+        <div class="insights fade-in">
+          <div class="section-title" style="margin-bottom: 8px;">Match Insights</div>
+          <div class="insight-row">
+            <div class="ico">🪙</div>
+            <div class="label">Toss Impact</div>
+            <div class="val" id="tossImpact">—</div>
+          </div>
+          <div class="insight-row">
+            <div class="ico">🏟️</div>
+            <div class="label">Home Advantage</div>
+            <div class="val" id="homeAdv">—</div>
+          </div>
+          <div class="insight-row">
+            <div class="ico">🌱</div>
+            <div class="label">Pitch Read</div>
+            <div class="val" id="pitchRead">—</div>
+          </div>
+          <div class="insight-row">
+            <div class="ico">🌤️</div>
+            <div class="label">Weather Effect</div>
+            <div class="val" id="weatherEff">—</div>
+          </div>
+          <div class="insight-row">
+            <div class="ico">📈</div>
+            <div class="label">Recent Form Edge</div>
+            <div class="val" id="formEdge">—</div>
+          </div>
+        </div>
+
+        <!-- Commentary -->
+        <div class="commentary fade-in" id="commentary">—</div>
+
+        <!-- Simulate again -->
+        <button class="again-btn" id="againBtn">🔄 Simulate Again</button>
+      </div>
+    </section>
+  </div>
+
+  <footer>
+    Built with <span>♥</span> for cricket fans • IPL Oracle is a fictional analytics demo. Predictions are simulated.
+  </footer>
+</div>
+
+<script>
+/* ============================================================
+   IPL ORACLE — Prediction Engine
+   ============================================================ */
+
+/* ---------- Team Database with Hidden Ratings ---------- */
+/* Ratings reflect approximate franchise strength bands across departments.
+   These are simulated values used only by the prediction engine. */
+const TEAMS = {
+  CSK:   { name: "Chennai Super Kings",      short: "CSK",   home: "Chennai",     grad: ["#FDB913", "#F47A1F"],  textColor: "#1a1a1a", batting: 87, bowling: 84, fielding: 86, form: 82, exp: 95 },
+  MI:    { name: "Mumbai Indians",           short: "MI",    home: "Mumbai",      grad: ["#004BA0", "#00A2FF"],  textColor: "#ffffff", batting: 89, bowling: 86, fielding: 84, form: 80, exp: 94 },
+  RCB:   { name: "Royal Challengers Bengaluru", short: "RCB", home: "Bengaluru", grad: ["#EC1C24", "#000000"],  textColor: "#ffffff", batting: 90, bowling: 80, fielding: 82, form: 84, exp: 80 },
+  KKR:   { name: "Kolkata Knight Riders",    short: "KKR",   home: "Kolkata",     grad: ["#3A225D", "#F7B72A"],  textColor: "#ffffff", batting: 86, bowling: 88, fielding: 83, form: 86, exp: 88 },
+  SRH:   { name: "Sunrisers Hyderabad",      short: "SRH",   home: "Hyderabad",   grad: ["#FF822A", "#000000"],  textColor: "#ffffff", batting: 88, bowling: 83, fielding: 81, form: 81, exp: 82 },
+  RR:    { name: "Rajasthan Royals",         short: "RR",    home: "Jaipur",      grad: ["#EA1A85", "#254AA5"],  textColor: "#ffffff", batting: 85, bowling: 84, fielding: 85, form: 83, exp: 84 },
+  DC:    { name: "Delhi Capitals",           short: "DC",    home: "Delhi",       grad: ["#17449B", "#EF1B23"],  textColor: "#ffffff", batting: 84, bowling: 82, fielding: 83, form: 78, exp: 78 },
+  PBKS:  { name: "Punjab Kings",             short: "PBKS",  home: "Mohali",      grad: ["#DD1F2D", "#A7A9AC"],  textColor: "#ffffff", batting: 83, bowling: 80, fielding: 79, form: 76, exp: 75 },
+  GT:    { name: "Gujarat Titans",           short: "GT",    home: "Ahmedabad",   grad: ["#1B2133", "#B4975A"],  textColor: "#ffffff", batting: 85, bowling: 87, fielding: 84, form: 85, exp: 76 },
+  LSG:   { name: "Lucknow Super Giants",     short: "LSG",   home: "Lucknow",     grad: ["#00A6E0", "#FFCB05"],  textColor: "#1a1a1a", batting: 84, bowling: 83, fielding: 82, form: 80, exp: 74 }
+};
+
+/* ---------- Venues (with associated home franchise) ---------- */
+const VENUES = [
+  { name: "M. A. Chidambaram Stadium, Chennai", city: "Chennai",    home: "CSK", pitchBias: "Spin" },
+  { name: "Wankhede Stadium, Mumbai",            city: "Mumbai",     home: "MI",  pitchBias: "Batting" },
+  { name: "M. Chinnaswamy Stadium, Bengaluru",   city: "Bengaluru",  home: "RCB", pitchBias: "Batting" },
+  { name: "Eden Gardens, Kolkata",               city: "Kolkata",    home: "KKR", pitchBias: "Pace" },
+  { name: "Rajiv Gandhi Intl. Stadium, Hyderabad", city: "Hyderabad", home: "SRH", pitchBias: "Batting" },
+  { name: "Sawai Mansingh Stadium, Jaipur",      city: "Jaipur",     home: "RR",  pitchBias: "Batting" },
+  { name: "Arun Jaitley Stadium, Delhi",         city: "Delhi",      home: "DC",  pitchBias: "Pace" },
+  { name: "IS Bindra Stadium, Mohali",           city: "Mohali",     home: "PBKS",pitchBias: "Pace" },
+  { name: "Narendra Modi Stadium, Ahmedabad",    city: "Ahmedabad",  home: "GT",  pitchBias: "Bowling" },
+  { name: "Ekana Stadium, Lucknow",              city: "Lucknow",    home: "LSG", pitchBias: "Spin" },
+  { name: "Dharamshala (Neutral)",               city: "Dharamshala",home: null,  pitchBias: "Pace" },
+  { name: "Visakhapatnam (Neutral)",             city: "Visakhapatnam", home: null, pitchBias: "Bowling" }
+];
+
+/* ---------- DOM helpers ---------- */
+const $ = (id) => document.getElementById(id);
+const teamKeys = Object.keys(TEAMS);
+
+/* ---------- Populate dropdowns ---------- */
+function populateTeams() {
+  const t1 = $("team1"), t2 = $("team2"), toss = $("tossWinner");
+  teamKeys.forEach((k, i) => {
+    [t1, t2].forEach(sel => {
+      const o = document.createElement("option");
+      o.value = k; o.textContent = `${TEAMS[k].short} — ${TEAMS[k].name}`;
+      sel.appendChild(o);
+    });
+  });
+  t1.value = "CSK"; t2.value = "MI";
+  refreshTossOptions();
+
+  // Venues
+  const v = $("venue");
+  VENUES.forEach(ve => {
+    const o = document.createElement("option");
+    o.value = ve.name; o.textContent = ve.name;
+    v.appendChild(o);
+  });
+  v.value = VENUES[0].name;
+}
+
+/* Toss dropdown depends on selected teams */
+function refreshTossOptions() {
+  const t1 = $("team1").value, t2 = $("team2").value;
+  const toss = $("tossWinner");
+  const prev = toss.value;
+  toss.innerHTML = "";
+  [t1, t2].forEach(k => {
+    const o = document.createElement("option");
+    o.value = k; o.textContent = TEAMS[k].name;
+    toss.appendChild(o);
+  });
+  toss.value = (prev === t1 || prev === t2) ? prev : t1;
+}
+
+/* Prevent same-team selection */
+function enforceDifferentTeams(changed) {
+  const t1 = $("team1"), t2 = $("team2");
+  if (t1.value === t2.value) {
+    // Auto-pick the next available team for the OTHER selector
+    const other = changed === "team1" ? t2 : t1;
+    const taken = changed === "team1" ? t1.value : t2.value;
+    const next = teamKeys.find(k => k !== taken);
+    other.value = next;
+  }
+  refreshTossOptions();
+}
+
+/* ---------- Segmented control setup ---------- */
+function setupSeg(groupId) {
+  const group = $(groupId);
+  group.addEventListener("click", (e) => {
+    const seg = e.target.closest(".seg");
+    if (!seg) return;
+    group.querySelectorAll(".seg").forEach(s => s.classList.remove("active"));
+    seg.classList.add("active");
+  });
+}
+function getSeg(groupId) {
+  return $(groupId).querySelector(".seg.active").dataset.value;
+}
+
+/* ---------- Prediction Engine ---------- */
+/*
+  computePrediction()
+  ---------------------
+  Builds a composite "edge" score for each team using:
+   - overall strength (weighted batting/bowling/fielding/form/experience)
+   - home ground advantage (if venue.home matches team)
+   - toss advantage (winning toss + suitable decision)
+   - pitch suitability (which team profile fits the surface)
+   - chasing advantage (team bowling first when dew likely)
+   - weather modifier
+   - small randomized factor for realism
+  Converts edge difference into probabilities via logistic curve, then
+  clamps to [10, 90] to avoid impossible 0/100 predictions.
+*/
+function computePrediction(opts) {
+  const A = TEAMS[opts.team1];
+  const B = TEAMS[opts.team2];
+
+  // 1. Base overall strength (weighted average)
+  const overall = (t) => 0.28*t.batting + 0.28*t.bowling + 0.14*t.fielding + 0.18*t.form + 0.12*t.exp;
+  let scoreA = overall(A);
+  let scoreB = overall(B);
+
+  // 2. Home ground advantage
+  const venueObj = VENUES.find(v => v.name === opts.venue);
+  let homeAdvText = "Neutral venue";
+  if (venueObj.home === opts.team1) { scoreA += 4.5; homeAdvText = `${A.short} plays at home (${venueObj.city})`; }
+  else if (venueObj.home === opts.team2) { scoreB += 4.5; homeAdvText = `${B.short} plays at home (${venueObj.city})`; }
+
+  // 3. Pitch suitability
+  /* Heuristic: batting pitches favor higher batting rating; bowling pitches favor higher bowling rating;
+     spin/pace add a smaller weighted preference. */
+  let pitchReadText = "";
+  const pitchEdge = (t) => {
+    if (opts.pitch === "Batting") return (t.batting - 80) * 0.35;
+    if (opts.pitch === "Bowling") return (t.bowling - 80) * 0.40;
+    if (opts.pitch === "Spin")    return (t.bowling * 0.6 + t.fielding * 0.4 - 80) * 0.30;
+    if (opts.pitch === "Pace")    return (t.bowling - 80) * 0.30 + (t.fielding - 80) * 0.10;
+    return 0;
+  };
+  scoreA += pitchEdge(A);
+  scoreB += pitchEdge(B);
+  if (opts.pitch === "Batting") pitchReadText = "High-scoring surface, batters dominate";
+  else if (opts.pitch === "Bowling") pitchReadText = "Two-paced wicket, bowlers in the game";
+  else if (opts.pitch === "Spin") pitchReadText = "Slow track, spinners get assistance";
+  else pitchReadText = "Pace and bounce on offer";
+
+  // 4. Toss advantage (winning toss + correct decision worth small but real edge)
+  /* Dew favors chasing (bowl first); humid/rain also favors bowl first; clear/dry favors bat first */
+  const idealDecision = (opts.weather === "Dew" || opts.weather === "Rain" || opts.weather === "Humid") ? "Bowl" : "Bat";
+  const tossWinnerIsA = opts.toss === opts.team1;
+  let tossEdge = 1.5; // base for winning toss
+  if (opts.tossDecision === idealDecision) tossEdge += 2.0;
+  else tossEdge -= 0.5;
+  if (tossWinnerIsA) scoreA += tossEdge; else scoreB += tossEdge;
+
+  const tossImpactText = `${TEAMS[opts.toss].short} won toss, chose to ${opts.tossDecision.toLowerCase()} first — ${tossEdge >= 2 ? "smart call" : tossEdge >= 1 ? "fair choice" : "questionable read"}`;
+
+  // 5. Chasing advantage with dew (additional bowling-first benefit)
+  if ((opts.weather === "Dew" || opts.weather === "Humid") && opts.tossDecision === "Bowl") {
+    if (tossWinnerIsA) scoreA += 1.5; else scoreB += 1.5;
+  }
+
+  // 6. Weather effect text
+  let weatherText = "";
+  if (opts.weather === "Clear") weatherText = "Clear skies, no major effect";
+  else if (opts.weather === "Dew") weatherText = "Dew expected — chasing side favored";
+  else if (opts.weather === "Humid") weatherText = "Humid air — swing assistance early";
+  else weatherText = "Rain threat — chase + DLS in play";
+
+  // 7. Recent form edge (already in overall, but emphasize)
+  const formDiff = A.form - B.form;
+  let formEdgeText = "Evenly matched form";
+  if (formDiff >= 4) formEdgeText = `${A.short} arrive in better form`;
+  else if (formDiff <= -4) formEdgeText = `${B.short} arrive in better form`;
+
+  // 8. Random uncertainty factor (controlled): +/- 3.5
+  const rand = (Math.random() - 0.5) * 7;
+  scoreA += rand;
+  scoreB -= rand;
+
+  // Convert edge -> probability using logistic curve
+  const diff = scoreA - scoreB;
+  let probA = 1 / (1 + Math.exp(-diff / 6));   // smoothness factor
+  // Clamp to avoid impossible predictions
+  probA = Math.max(0.12, Math.min(0.88, probA));
+  let probB = 1 - probA;
+
+  // Round to integers preserving sum=100
+  let pA = Math.round(probA * 100);
+  let pB = 100 - pA;
+
+  // ---- First innings score prediction ----
+  const battingTeam = opts.tossDecision === "Bat" ? opts.toss : (opts.toss === opts.team1 ? opts.team2 : opts.team1);
+  const bowlingTeam = battingTeam === opts.team1 ? opts.team2 : opts.team1;
+  const bt = TEAMS[battingTeam], bw = TEAMS[bowlingTeam];
+
+  let basePar = 170;
+  if (opts.pitch === "Batting") basePar = 195;
+  else if (opts.pitch === "Bowling") basePar = 150;
+  else if (opts.pitch === "Spin") basePar = 160;
+  else if (opts.pitch === "Pace") basePar = 165;
+  if (opts.weather === "Humid") basePar -= 6;
+  if (opts.weather === "Rain") basePar -= 8;
+
+  const battingDelta = (bt.batting - 85) * 1.6;
+  const bowlingDelta = (bw.bowling - 85) * 1.4;
+  let projected = basePar + battingDelta - bowlingDelta + (Math.random() * 14 - 7);
+  projected = Math.max(115, Math.min(235, Math.round(projected)));
+  const scoreLow = projected - 6, scoreHigh = projected + 8;
+
+  // ---- Powerplay & Death overs predictions ----
+  let ppRuns = Math.round(projected * 0.27 + (Math.random()*6 - 3));
+  let ppWkts = Math.max(0, Math.min(3, Math.round((90 - bt.batting + bw.bowling - 80) / 5 + Math.random())));
+  let doRuns = Math.round(projected * 0.34 + (Math.random()*8 - 4));
+  let doWkts = Math.max(1, Math.min(5, 2 + Math.round(Math.random()*2)));
+
+  const ppDesc = ppRuns >= 55 ? "Explosive start expected" : ppRuns >= 45 ? "Steady fluent start" : "Cautious approach likely";
+  const doDesc = doRuns >= 65 ? "Carnage at the death" : doRuns >= 55 ? "Strong finish on the cards" : "Bowlers may pull it back";
+
+  // ---- Confidence label ----
+  const margin = Math.abs(pA - pB);
+  let confidence = "Low";
+  if (margin >= 30) confidence = "Very High";
+  else if (margin >= 20) confidence = "High";
+  else if (margin >= 10) confidence = "Moderate";
+
+  // ---- Excitement (closer match = higher excitement) ----
+  let excitement = "🔥 Blockbuster";
+  if (margin >= 35) excitement = "📉 One-Sided";
+  else if (margin >= 22) excitement = "👀 Competitive";
+  else if (margin >= 10) excitement = "🔥 Tight Contest";
+  else excitement = "🎢 Nail-Biter";
+
+  // ---- Winner reason ----
+  const winnerKey = pA >= pB ? opts.team1 : opts.team2;
+  const loserKey  = pA >= pB ? opts.team2 : opts.team1;
+  const reasons = [];
+  if (venueObj.home === winnerKey) reasons.push("home conditions");
+  if (TEAMS[winnerKey].batting > TEAMS[loserKey].batting + 2) reasons.push("superior batting depth");
+  if (TEAMS[winnerKey].bowling > TEAMS[loserKey].bowling + 2) reasons.push("stronger bowling attack");
+  if (TEAMS[winnerKey].form > TEAMS[loserKey].form + 2) reasons.push("recent form");
+  if (opts.toss === winnerKey && opts.tossDecision === idealDecision) reasons.push("smart toss call");
+  if (reasons.length === 0) reasons.push("marginal overall edge");
+  const reasonText = `${TEAMS[winnerKey].name} edge ahead thanks to ${reasons.slice(0,3).join(", ")}.`;
+
+  // ---- Momentum (-1 .. 1) toward team B side ----
+  const momentum = (pB - pA) / 100; // negative -> A leans, positive -> B leans
+  // We'll convert to left % on the bar (50 = neutral)
+  const momentumPct = 50 + momentum * 50;
+
+  return {
+    team1: opts.team1, team2: opts.team2,
+    pA, pB,
+    winnerKey, loserKey, reasonText,
+    confidence, excitement,
+    scoreRange: `${scoreLow} - ${scoreHigh}`,
+    ppLine: `${ppRuns}/${ppWkts}`,
+    doLine: `${doRuns}/${doWkts}`,
+    ppDesc, doDesc,
+    homeAdvText, pitchReadText, tossImpactText, weatherText, formEdgeText,
+    momentumPct,
+    battingTeam, projected
+  };
+}
+
+/* ---------- Commentary Generator ---------- */
+const COMM_TEMPLATES = [
+  "{W} look the better balanced unit tonight — expect them to control the middle overs and squeeze {L}.",
+  "All eyes on the {V} surface — if {W} win key moments in the powerplay, this could be over by the 17th over.",
+  "{L} can't afford a slow start here. {W} are built to capitalize on early wickets.",
+  "Toss may end up being decisive — {T} reading the conditions well by choosing to {D} first.",
+  "The {P} pitch should suit {W}'s template — expect tactical bowling changes to dictate the chase.",
+  "Don't write off {L} yet — one Powerplay blitz and the momentum shifts completely.",
+  "Death overs will be the battleground. Whichever side absolves nerves first walks away with this one.",
+  "{W} have the edge on paper, but T20 cricket has a way of laughing at predictions."
+];
+function commentary(p, opts) {
+  const W = TEAMS[p.winnerKey].name;
+  const L = TEAMS[p.loserKey].name;
+  const V = (VENUES.find(v=>v.name===opts.venue) || {}).city || "the venue";
+  const T = TEAMS[opts.toss].short;
+  const D = opts.tossDecision.toLowerCase();
+  const P = opts.pitch.toLowerCase();
+  const tmpl = COMM_TEMPLATES[Math.floor(Math.random()*COMM_TEMPLATES.length)];
+  return tmpl.replace(/{W}/g,W).replace(/{L}/g,L).replace(/{V}/g,V).replace(/{T}/g,T).replace(/{D}/g,D).replace(/{P}/g,P);
+}
+
+/* ---------- Render Helpers ---------- */
+function applyTeamLogo(el, key) {
+  const t = TEAMS[key];
+  el.textContent = t.short;
+  el.style.background = `linear-gradient(135deg, ${t.grad[0]}, ${t.grad[1]})`;
+  el.style.color = t.textColor;
+}
+
+function renderResults(p, opts) {
+  // Matchup
+  applyTeamLogo($("logo1"), p.team1);
+  applyTeamLogo($("logo2"), p.team2);
+  $("name1").textContent = TEAMS[p.team1].name;
+  $("name2").textContent = TEAMS[p.team2].name;
+  $("prob1Lbl").textContent = p.pA + "% win chance";
+  $("prob2Lbl").textContent = p.pB + "% win chance";
+
+  // Bars
+  $("bar1Name").textContent = TEAMS[p.team1].short;
+  $("bar2Name").textContent = TEAMS[p.team2].short;
+  $("bar1Val").textContent = p.pA + "%";
+  $("bar2Val").textContent = p.pB + "%";
+
+  // Reset then animate
+  $("bar1").style.width = "0%";
+  $("bar2").style.width = "0%";
+  requestAnimationFrame(() => {
+    setTimeout(() => {
+      $("bar1").style.width = p.pA + "%";
+      $("bar2").style.width = p.pB + "%";
+    }, 80);
+  });
+
+  // Gauge
+  const winnerPct = Math.max(p.pA, p.pB);
+  $("gaugePct").textContent = winnerPct + "%";
+  const circumference = 2 * Math.PI * 50; // r=50
+  const dash = (winnerPct / 100) * circumference;
+  $("gaugeFill").style.strokeDasharray = "0 " + circumference;
+  requestAnimationFrame(() => {
+    setTimeout(() => {
+      $("gaugeFill").style.strokeDasharray = `${dash} ${circumference - dash}`;
+    }, 120);
+  });
+
+  // Winner info
+  $("winnerName").textContent = TEAMS[p.winnerKey].name;
+  $("winnerReason").textContent = p.reasonText;
+
+  // Stats
+  $("confidence").textContent = p.confidence;
+  $("firstScore").textContent = p.scoreRange + " (" + TEAMS[p.battingTeam].short + ")";
+  $("excitement").textContent = p.excitement;
+
+  // Momentum
+  $("momLeft").textContent = TEAMS[p.team1].short;
+  $("momRight").textContent = TEAMS[p.team2].short;
+  $("momMarker").style.left = "50%";
+  requestAnimationFrame(() => {
+    setTimeout(() => {
+      $("momMarker").style.left = Math.min(96, Math.max(4, p.momentumPct)) + "%";
+    }, 200);
+  });
+
+  // Phases
+  $("ppScore").textContent = p.ppLine + " runs";
+  $("ppDesc").textContent  = p.ppDesc;
+  $("doScore").textContent = p.doLine + " runs";
+  $("doDesc").textContent  = p.doDesc;
+
+  // Insights
+  $("tossImpact").textContent = p.tossImpactText;
+  $("homeAdv").textContent = p.homeAdvText;
+  $("pitchRead").textContent = p.pitchReadText;
+  $("weatherEff").textContent = p.weatherText;
+  $("formEdge").textContent = p.formEdgeText;
+
+  // Commentary
+  $("commentary").textContent = commentary(p, opts);
+}
+
+/* ---------- Run prediction with loading animation ---------- */
+const LOADING_LINES = [
+  "Computing team strengths...",
+  "Analyzing pitch & venue history...",
+  "Reading toss intent...",
+  "Modeling weather impact...",
+  "Calibrating probability curve...",
+  "Generating commentary..."
+];
+
+function runPrediction() {
+  const opts = {
+    team1: $("team1").value,
+    team2: $("team2").value,
+    venue: $("venue").value,
+    toss: $("tossWinner").value,
+    tossDecision: getSeg("tossDecision"),
+    pitch: getSeg("pitchType"),
+    weather: getSeg("weather")
+  };
+
+  $("emptyState").style.display = "none";
+  $("resultContent").style.display = "none";
+  $("loadingState").style.display = "grid";
+  $("predictBtn").disabled = true;
+
+  // Cycle loading lines
+  let i = 0;
+  $("loadingSub").textContent = LOADING_LINES[0];
+  const cyc = setInterval(() => {
+    i = (i + 1) % LOADING_LINES.length;
+    $("loadingSub").textContent = LOADING_LINES[i];
+  }, 280);
+
+  // Simulate compute time then render
+  setTimeout(() => {
+    clearInterval(cyc);
+    const prediction = computePrediction(opts);
+    $("loadingState").style.display = "none";
+    $("resultContent").style.display = "block";
+    // Re-trigger fade animations
+    document.querySelectorAll("#resultContent .fade-in").forEach(el => {
+      el.classList.remove("fade-in"); void el.offsetWidth; el.classList.add("fade-in");
+    });
+    renderResults(prediction, opts);
+    $("predictBtn").disabled = false;
+  }, 1700);
+}
+
+/* ---------- Particle background ---------- */
+function initParticles() {
+  const canvas = $("particles");
+  const ctx = canvas.getContext("2d");
+  let w, h, particles = [];
+
+  function resize() {
+    w = canvas.width = window.innerWidth;
+    h = canvas.height = window.innerHeight;
+  }
+  resize();
+  window.addEventListener("resize", resize);
+
+  const COUNT = Math.min(60, Math.floor((window.innerWidth * window.innerHeight) / 28000));
+  for (let i = 0; i < COUNT; i++) {
+    particles.push({
+      x: Math.random() * w, y: Math.random() * h,
+      vx: (Math.random() - 0.5) * 0.25,
+      vy: (Math.random() - 0.5) * 0.25,
+      r: Math.random() * 1.6 + 0.3,
+      hue: Math.random() < 0.5 ? "rgba(255, 61, 119, " : (Math.random() < 0.5 ? "rgba(122, 92, 255, " : "rgba(0, 212, 255, ")
+    });
+  }
+
+  function frame() {
+    ctx.clearRect(0,0,w,h);
+    // Draw lines between close particles
+    for (let i = 0; i < particles.length; i++) {
+      const p = particles[i];
+      p.x += p.vx; p.y += p.vy;
+      if (p.x < 0 || p.x > w) p.vx *= -1;
+      if (p.y < 0 || p.y > h) p.vy *= -1;
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, p.r, 0, Math.PI*2);
+      ctx.fillStyle = p.hue + "0.7)";
+      ctx.fill();
+      for (let j = i+1; j < particles.length; j++) {
+        const q = particles[j];
+        const dx = p.x - q.x, dy = p.y - q.y;
+        const d = Math.sqrt(dx*dx + dy*dy);
+        if (d < 120) {
+          ctx.beginPath();
+          ctx.moveTo(p.x, p.y); ctx.lineTo(q.x, q.y);
+          ctx.strokeStyle = "rgba(180, 180, 255, " + (0.10 * (1 - d/120)) + ")";
+          ctx.lineWidth = 0.6;
+          ctx.stroke();
+        }
+      }
+    }
+    requestAnimationFrame(frame);
+  }
+  frame();
+}
+
+/* ---------- Boot ---------- */
+function boot() {
+  populateTeams();
+  setupSeg("tossDecision");
+  setupSeg("pitchType");
+  setupSeg("weather");
+
+  $("team1").addEventListener("change", () => enforceDifferentTeams("team1"));
+  $("team2").addEventListener("change", () => enforceDifferentTeams("team2"));
+
+  $("predictBtn").addEventListener("click", runPrediction);
+  $("againBtn").addEventListener("click", runPrediction);
+
+  // Load font (Inter) — fail silently offline
+  const link = document.createElement("link");
+  link.rel = "stylesheet";
+  link.href = "https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap";
+  document.head.appendChild(link);
+
+  initParticles();
+}
+
+document.addEventListener("DOMContentLoaded", boot);
+</script>
+</body>
+</html>
